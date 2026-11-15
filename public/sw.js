@@ -1,0 +1,2 @@
+self.addEventListener('push',e=>{const d=e.data?.json()||{};e.waitUntil(self.registration.showNotification('Pečujeme',{body:d.body||'Nová událost',icon:'/icon.svg',tag:d.id||String(Date.now()),data:{url:'/'}}))});
+self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(async ws=>{if(ws[0])return ws[0].focus();return clients.openWindow('/')}))});
