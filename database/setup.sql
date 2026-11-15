@@ -44,6 +44,17 @@ end $$;
 revoke all on function public.record_care_event(uuid,text,uuid,uuid) from public,anon,authenticated;
 grant execute on function public.record_care_event(uuid,text,uuid,uuid) to service_role;
 commit;
+-- Append-only credentials migration for existing installations.
+create table public.app_credentials (
+ role text primary key check(role in ('admin','terminal')),
+ password_hash text not null,
+ version uuid not null default gen_random_uuid(),
+ updated_at timestamptz not null default now()
+);
+alter table public.app_credentials enable row level security;
+revoke all on public.app_credentials from public,anon,authenticated;
+grant select,insert,update,delete on public.app_credentials to service_role;
+
 -- Configure actual people in the app. Tasks below are starter configuration, not care records.
 insert into public.tasks(name,category,icon) values
 ('Koupání','Péče','bath'),('Podání jídla','Péče','cup'),('Podání léků','Péče','heart'),('Osobní hygiena','Péče','bath'),('Procházka','Péče','leaf'),('Úklid myčky','Domácnost','home'),('Úklid domácnosti','Domácnost','home'),('Výměna prádla','Domácnost','list'),('Nákup','Domácnost','list');

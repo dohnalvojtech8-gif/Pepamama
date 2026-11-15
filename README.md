@@ -51,3 +51,9 @@ npm test
 node --check server.js
 node --check public/app.js
 ```
+
+## Změna hesel v aplikaci
+
+Správce otevře Nastavení → Hesla a přístup. Pro změnu vlastního hesla i hesla terminálu je třeba současné heslo správce, nové heslo (12–128 znaků) a jeho zopakování. Hesla musí být rozdílná. Nová hesla se ukládají jako scrypt otisky do privátní tabulky app_credentials a mají přednost před počátečními hesly v Renderu. Změna odhlásí stará zařízení daného účtu; správce při změně vlastního hesla zůstane přihlášen. Starší instalace aplikují database/passwords.sql jednou; nová instalace obsahuje tabulku v setup.sql.
+
+Při zapomenutí hesla může vlastník projektu v Supabase SQL editoru odstranit pouze odpovídající řádek app_credentials (role admin nebo terminal). Tím obnoví počáteční heslo z Renderu a zneplatní dosavadní relace s databázovou verzí hesla. Neodstraňujte tabulku ani historii péče.
