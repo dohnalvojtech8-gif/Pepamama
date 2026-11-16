@@ -31,7 +31,7 @@ if(path.startsWith('/api/')){
 
  const r=await role(req);if(!r)return json(res,401,{error:'Přihlaste zařízení.'});
  if(path==='/api/logout'&&req.method==='POST')return json(res,200,{ok:true},{'Set-Cookie':'care_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});
- if(path==='/api/state'&&req.method==='GET'){const [caregivers,tasks,visits,events]=await Promise.all([all('caregivers'),all('tasks'),all('visits'),all('events','created_at.desc,id')]);return json(res,200,{caregivers,tasks,visits:r==='admin'?visits:visits.filter(v=>!v.departed_at),events:r==='admin'?events:events.filter(e=>dayString(e.created_at)===dayString(new Date()))})}
+ if(path==='/api/state'&&req.method==='GET'){const [caregivers,tasks,visits,events]=await Promise.all([all('caregivers'),all('tasks'),all('visits'),all('events','created_at.desc,id')]);return json(res,200,{caregivers:r==='admin'?caregivers:caregivers.filter(p=>!p.deleted_at),tasks:r==='admin'?tasks:tasks.filter(t=>!t.deleted_at),visits:r==='admin'?visits:visits.filter(v=>!v.departed_at),events:r==='admin'?events:events.filter(e=>dayString(e.created_at)===dayString(new Date()))})}
  if(path==='/api/stream'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});res.write(': connected\n\n');streams.add(res);const t=setInterval(()=>res.write(': heartbeat\n\n'),25000);req.on('close',()=>{clearInterval(t);streams.delete(res)});return}
  if(path==='/api/event'&&req.method==='POST'){const b=await body(req),uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;if(!uuid.test(b.caregiver_id)||!uuid.test(b.request_id)||!['arrival','task','departure'].includes(b.kind)||(b.kind==='task'&&!uuid.test(b.task_id)))return json(res,400,{error:'Neplatná událost.'});const event=await db('rpc/record_care_event','POST',{p_caregiver:b.caregiver_id,p_kind:b.kind,p_task:b.task_id||null,p_request:b.request_id});for(const s of streams)s.write('data: changed\n\n');let delivery={failed:0};if(!event.duplicate){try{delivery=await notify(event)}catch{delivery.failed=1;console.error('Push dispatch failed')}}return json(res,200,{event,notification_failures:delivery.failed})}
  if(r!=='admin')return json(res,403,{error:'Tuto akci může provést pouze správce.'});
@@ -45,6 +45,19 @@ if(path.startsWith('/api/')){
   const version=randomUUID();await db('app_credentials','POST',{role:target,password_hash:hashPassword(password),version,updated_at:new Date().toISOString()});attempts.delete(key);
   for(const stream of streams)stream.end();
   return json(res,200,{ok:true},target==='admin'?{'Set-Cookie':sessionCookie('admin',version)}:{});
+ }
+ if(path==='/api/remove'&&req.method==='POST'){
+  const b=await body(req);if(!['caregiver','task'].includes(b.type)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.id))return json(res,400,{error:'Neplatný profil nebo úkon.'});
+  const result=await db('rpc/remove_care_item','POST',{p_type:b.type,p_id:b.id});
+  if(result.error)return json(res,409,{error:result.error});
+  for(const stream of streams)stream.write('data: changed\n\n');return json(res,200,{ok:true});
+ }
+ if(path==='/api/reset-data'&&req.method==='POST'){
+  const b=await body(req);if(b.confirmation!=='VYMAZAT'||!['history','all'].includes(b.scope))return json(res,400,{error:'Vyberte rozsah a potvrďte slovem VYMAZAT.'});
+  const key='reset:'+req.socket.remoteAddress;let a=attempts.get(key)||{count:0,until:Date.now()+900000};if(a.until<Date.now())a={count:0,until:Date.now()+900000};if(a.count>=10)return json(res,429,{error:'Příliš mnoho pokusů. Zkuste to za 15 minut.'});a.count++;attempts.set(key,a);
+  if(!verifyPassword(String(b.password||''),await credential('admin'),'admin'))return json(res,401,{error:'Heslo majitele není správné.'});
+  await db('rpc/reset_care_data','POST',{p_scope:b.scope});attempts.delete(key);
+  for(const stream of streams)stream.write('data: changed\n\n');return json(res,200,{ok:true});
  }
  if(path==='/api/manage'&&req.method==='POST'){const b=await body(req),name=String(b.name||'').trim();if(!name||name.length>80||!['caregiver','task'].includes(b.type))return json(res,400,{error:'Vyplňte platný název.'});const result=await db(b.type==='task'?'tasks':'caregivers','POST',b.type==='task'?{name,category:b.category==='Domácnost'?'Domácnost':'Péče',icon:'check'}:{name});for(const s of streams)s.write('data: changed\n\n');return json(res,200,{ok:true,result})}
  if(path==='/api/subscribe'&&req.method==='POST'){if(!push)return json(res,400,{error:'Push není nakonfigurovaný.'});const b=await body(req);let endpoint;try{endpoint=new URL(b.endpoint)}catch{}const host=endpoint?.hostname||'',allowed=host==='fcm.googleapis.com'||host==='updates.push.services.mozilla.com'||host.endsWith('.push.services.mozilla.com')||host==='web.push.apple.com'||host.endsWith('.notify.windows.com');if(!endpoint||endpoint.protocol!=='https:'||!allowed||!b.keys?.auth||!b.keys?.p256dh)return json(res,400,{error:'Neplatný odběr oznámení.'});await db('push_subscriptions','POST',{endpoint:b.endpoint,subscription:b});return json(res,200,{ok:true})}

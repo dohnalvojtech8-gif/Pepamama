@@ -57,3 +57,11 @@ node --check public/app.js
 Správce otevře Nastavení → Hesla a přístup. Pro změnu vlastního hesla i hesla terminálu je třeba současné heslo správce, nové heslo (12–128 znaků) a jeho zopakování. Hesla musí být rozdílná. Nová hesla se ukládají jako scrypt otisky do privátní tabulky app_credentials a mají přednost před počátečními hesly v Renderu. Změna odhlásí stará zařízení daného účtu; správce při změně vlastního hesla zůstane přihlášen. Starší instalace aplikují database/passwords.sql jednou; nová instalace obsahuje tabulku v setup.sql.
 
 Při zapomenutí hesla může vlastník projektu v Supabase SQL editoru odstranit pouze odpovídající řádek app_credentials (role admin nebo terminal). Tím obnoví počáteční heslo z Renderu a zneplatní dosavadní relace s databázovou verzí hesla. Neodstraňujte tabulku ani historii péče.
+
+## Čitelnost a správa dat
+
+Rodinný přehled i terminál mají větší písmo, výrazné časy a barevně odlišené karty. Správce (majitel) může vytvářet a odstraňovat úkony i profily pečovatelek. Odstranění skryje položku z nabídky, ale zachová historii. Přítomnou pečovatelku lze odstranit až po odchodu. Terminál nemá oprávnění spravovat profily, úkony ani mazat data.
+
+V Nastavení → Vymazat aktuální data lze vymazat pouze historii, nebo všechna data péče včetně profilů a seznamu úkonů. Akce vyžaduje heslo majitele a slovo VYMAZAT; proběhne v jedné transakci. Hesla, relace zařízení a push odběry zůstanou zachované. Při plném vymazání se výchozí úkony automaticky neobnovují.
+
+Stávající instalace spustí jednou `database/manage-data.sql` před nasazením nové verze. Nové instalace používají pouze `database/setup.sql`, který správu dat již obsahuje. Upgrade samotný žádná data nemaže.
