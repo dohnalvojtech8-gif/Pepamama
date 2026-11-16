@@ -111,13 +111,14 @@ create or replace function public.reset_care_data(p_scope text) returns jsonb
 language plpgsql security invoker set search_path='' as $$
 begin
  if p_scope not in ('history','all') or p_scope is null then raise exception 'Neplatný rozsah'; end if;
+ -- Explicit primary-key predicates also support the API safeupdate protection.
  -- Block new events and administration while deleting related records atomically.
  lock table public.caregivers,public.tasks,public.visits,public.events in exclusive mode;
- delete from public.events;
- delete from public.visits;
+ delete from public.events where id is not null;
+ delete from public.visits where id is not null;
  if p_scope='all' then
-  delete from public.caregivers;
-  delete from public.tasks;
+  delete from public.caregivers where id is not null;
+  delete from public.tasks where id is not null;
  end if;
  return jsonb_build_object('ok',true);
 end $$;
