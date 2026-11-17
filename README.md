@@ -65,3 +65,11 @@ Rodinný přehled i terminál mají větší písmo, výrazné časy a barevně 
 V Nastavení → Vymazat aktuální data lze vymazat pouze historii, nebo všechna data péče včetně profilů a seznamu úkonů. Akce vyžaduje heslo majitele a slovo VYMAZAT; proběhne v jedné transakci. Hesla, relace zařízení a push odběry zůstanou zachované. Při plném vymazání se výchozí úkony automaticky neobnovují.
 
 Stávající instalace spustí jednou `database/manage-data.sql` před nasazením nové verze. Nové instalace používají pouze `database/setup.sql`, který správu dat již obsahuje. Upgrade samotný žádná data nemaže.
+
+## PWA a mobilní přehledy
+
+Aplikace se registruje jako PWA při každém spuštění, nezávisle na souhlasu s oznámeními. Manifest obsahuje PNG ikony 192/512 a samostatný režim, iOS používá apple-touch-icon. Instalace je dostupná v Nastavení → Přidat aplikaci na plochu; na iPhonu přes Safari → Sdílet → Přidat na plochu. Mobilní rodinný režim má pět spodních záložek a respektuje bezpečnou oblast displeje. Terminál zůstává samostatný.
+
+Service worker ukládá pouze veřejné soubory aplikace, nikdy API odpovědi, hesla ani údaje o péči. Bez internetu zobrazí zvláštní obrazovku a zápisy nejsou možné. Novou verzi lze zkontrolovat v Nastavení; pro aktivaci může být nutné aplikaci zavřít a znovu otevřít.
+
+Profil pečovatelky se otevírá na aktuálním kalendářním měsíci v Praze a zobrazuje hodiny, počet směn, dny péče a počty úkonů. Měsíční záložky obsahují aktuální a vždy nejméně tři předchozí měsíce, plus všechny starší měsíce od prvního záznamu dané pečovatelky. Archiv se odvozuje z trvale uložených směn a událostí; nevyžaduje cron, přesuny ani reset dat při změně měsíce. Otevřením dne a směny lze zobrazit časovou osu celé směny. Hodiny se dělí na hranicích dnů/měsíců včetně změn letního času; úkony se počítají podle času provedení. Po smazání historie majitelem nejsou smazané záznamy dostupné ani v archivu.
